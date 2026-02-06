@@ -11,14 +11,41 @@ This project is designed as a practical desktop demo for BLE + sensors, with ded
 
 ---
 
+## Screenshots
+
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="images/dashboard.png" width="420" alt="Dashboard" /><br/>
+      <sub><b>Dashboard</b></sub>
+    </td>
+    <td align="center">
+      <img src="images/giroscope.png" width="420" alt="Giroscope" /><br/>
+      <sub><b>Giroscope</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="images/temperature.png" width="420" alt="Temperature" /><br/>
+      <sub><b>Temperature</b></sub>
+    </td>
+    <td align="center">
+      <img src="images/audio.png" width="420" alt="Audio" /><br/>
+      <sub><b>Audio</b></sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Architecture
 
 ### macOS App
 - **Apple Swift version:** Swift 6.2.3
-- **package tools-version** 5.10.0
+- **Package tools-version:** 5.10.0
 - **UI:** SwiftUI
 - **BLE:** CoreBluetooth
-- **Build system:** Swift Package Manager 
+- **Build system:** Swift Package Manager
 
 Main components:
 - `BluetoothWorker.swift`  
@@ -65,6 +92,7 @@ Using NUS-compatible UUIDs:
 ### macOS
 - macOS 14+ (package target)
 - Swift 6.2.3
+- Xcode 16+ (recommended) or Swift toolchain compatible with Swift 6.2.3
 
 ### Board
 - Arduino Nano 33 BLE Sense Rev2
@@ -83,132 +111,19 @@ Using NUS-compatible UUIDs:
 From project root:
 
 ```bash
-swift build
 swift run BLEControlApp
 ```
 
-Release build:
+Or release build:
 
 ```bash
 swift build -c release
+./.build/release/BLEControlApp
 ```
 
 ---
 
-## Packaging `.app` (using your `pack.sh`)
-
-Your project includes a packaging script that:
-1. Builds release binary
-2. Generates/fetches app icon
-3. Creates `.icns`
-4. Assembles `.app` bundle
-5. Signs ad-hoc
-6. Verifies result
-
-Run:
-
-```bash
-chmod +x pack.sh
-./pack.sh
-```
-
-Result:
-- `dist/BLEControlApp.app`
-
-Open app:
-
-```bash
-open dist/BLEControlApp.app
-```
-
----
-
-## Upload Arduino Sketch
-
-1. Open Arduino IDE
-2. Select board: **Arduino Nano 33 BLE Sense Rev2**
-3. Paste/upload your sketch
-4. Open Serial Monitor (115200) to inspect status logs
-5. Keep board powered and advertising BLE
-
----
-
-## Typical Usage Flow
-
-1. Open macOS app
-2. Open **Tools → Devices**
-3. Click **Search**
-4. Select board (`Nano33BLE-UART`) and **Connect**
-5. Start/stop streams from Dashboard controls
-6. Open specialized views for richer visualizations
-
----
-
-## Command Protocol (App → Board)
-
-Examples:
-
-- `LED ON\n`
-- `LED OFF\n`
-- `GIROSCOPE\n`
-- `PROXIMITY\n`
-- `ENV\n`
-- `AUDIO\n`
-
-JSON response examples:
-
-```json
-{"type":"gyroscope","x":0.1234,"y":-0.1022,"z":0.0123}
-{"type":"proximity","value":52}
-{"type":"environment","c":24.18,"rh":43.21,"hpa":1012.80}
-{"type":"audio","rms":0.0331,"level":3,"peak":278}
-```
-
----
-
-## Notes on Streaming and Performance
-
-- Streaming is timer-driven on the app side (polling command-based).
-- Lower interval values increase responsiveness but also BLE traffic and CPU usage.
-- If UI appears stale:
-  - Confirm stream is enabled for that sensor
-  - Check that the board is still connected
-  - Verify incoming logs / JSON parse errors
-
----
-
-## Troubleshooting
-
-### 1) App crashes on launch or interaction
-Run with LLDB:
-
-```bash
-lldb ./dist/BLEControlApp.app/Contents/MacOS/BLEControlApp
-(lldb) run
-```
-
-If it crashes, inspect:
-- backtrace (`bt`)
-- thread state
-- whether UI state mutations are happening on main thread
-
-### 2) No devices found
-- Confirm board is advertising
-- Confirm UUIDs match in both app and sketch
-- Check macOS Bluetooth permission
-
-### 3) Connected but no data updates
-- Ensure stream toggle is ON
-- Verify command strings exactly match sketch handler
-- Check for JSON format issues (line terminator required)
-
-### 4) Permission issues
-Your app bundle must include:
-- `NSBluetoothAlwaysUsageDescription`
-
----
-
-## Swift Package Manifest
+## Package.swift (reference)
 
 ```swift
 // swift-tools-version: 5.10
@@ -233,17 +148,89 @@ let package = Package(
 
 ---
 
-## Project Scope
+## Bundle as .app (optional)
 
-This is a **demonstration app** for BLE + sensor telemetry with Arduino Nano 33 BLE Sense Rev2 on macOS.  
-It prioritizes:
-- clear BLE workflow,
-- practical sensor integration,
-- rapid UI experimentation.
+If you use your `pack.sh` script:
+
+```bash
+./pack.sh
+open "dist/BLEControlApp.app"
+```
+
+It builds release, prepares icon resources, creates the `.app` bundle, and performs ad-hoc signing.
+
+---
+
+## Arduino Sketch Notes
+
+The included sketch:
+- Starts BLE UART-like service
+- Reads sensors on demand
+- Computes audio RMS/peak from PDM callback
+- Sends JSON lines back to macOS app
+
+Make sure board is flashed and advertising before connecting from the app.
+
+---
+
+## Typical Workflow
+
+1. Power and flash the Nano 33 BLE Sense Rev2.
+2. Launch `BLEControlApp`.
+3. Open **Tools → Devices** and click **Search**.
+4. Connect to `Nano33BLE-UART` (or your configured local name).
+5. Use dashboard stream toggles and open sensor screens as needed.
+6. Open **Tools → Logs** for raw TX/RX diagnostics.
+
+---
+
+## Troubleshooting
+
+- **No devices found**
+  - Confirm board is powered and advertising.
+  - Confirm UUIDs in app and sketch match.
+  - Ensure Bluetooth permission is granted on macOS.
+
+- **Connected but no data**
+  - Check that stream is enabled in dashboard.
+  - Verify notify is enabled for TX characteristic.
+  - Inspect logs window for parse/command errors.
+
+- **High latency**
+  - Increase stream interval in dashboard controls.
+  - Avoid enabling all streams at very low intervals simultaneously.
+
+---
+
+## Project Layout (suggested)
+
+```text
+BLE_Mac/
+├─ Package.swift
+├─ README.md
+├─ images/
+│  ├─ dashboard.png
+│  ├─ giroscope.png
+│  ├─ temperature.png
+│  └─ audio.png
+├─ Sources/
+│  └─ BLEControlApp/
+│     ├─ App.swift
+│     ├─ BluetoothWorker.swift
+│     ├─ DashboardView.swift
+│     ├─ DashboardViewModel.swift
+│     ├─ DevicesWindowView.swift
+│     ├─ LogsWindowView.swift
+│     ├─ GiroscopeView.swift
+│     ├─ DistanceView.swift
+│     ├─ EnvironmentView.swift
+│     └─ EnvironmentAudioView.swift
+└─ sketch/
+   └─ sketch.ino
+```
 
 ---
 
 ## License
 
-MIT
-
+Use the license of your choice for this demo repository (MIT recommended for sample/demo apps).
