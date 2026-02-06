@@ -3,7 +3,6 @@
 //  BLEControlApp
 //
 //  App entry point and window/command configuration.
-//  Comments are intentionally kept only in file headers.
 //
 import SwiftUI
 
