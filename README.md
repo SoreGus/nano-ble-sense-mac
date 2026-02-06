@@ -208,6 +208,7 @@ Make sure board is flashed and advertising before connecting from the app.
 BLE_Mac/
 ├─ Package.swift
 ├─ README.md
+├─ sketch.ino
 ├─ images/
 │  ├─ dashboard.png
 │  ├─ giroscope.png
@@ -225,8 +226,6 @@ BLE_Mac/
 │     ├─ DistanceView.swift
 │     ├─ EnvironmentView.swift
 │     └─ EnvironmentAudioView.swift
-└─ sketch/
-   └─ sketch.ino
 ```
 
 ---
