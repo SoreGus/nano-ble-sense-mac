@@ -92,7 +92,7 @@ Using NUS-compatible UUIDs:
 ### macOS
 - macOS 14+ (package target)
 - Swift 6.2.3
-- Xcode 16+ (recommended) or Swift toolchain compatible with Swift 6.2.3
+- Swift toolchain compatible with Swift 6.2.3
 
 ### Board
 - Arduino Nano 33 BLE Sense Rev2
