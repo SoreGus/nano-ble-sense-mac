@@ -1,0 +1,15 @@
+name: BLEControlApp
+options:
+  bundleIdPrefix: com.gustavosore
+targets:
+  BLEControlApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - Sources/BLEControlApp
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gustavosore.blecontrolapp
+      INFOPLIST_FILE: Sources/BLEControlApp/Info.plist
+      SWIFT_VERSION: 5.10
+      CODE_SIGN_STYLE: Automatic

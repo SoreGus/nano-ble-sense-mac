@@ -14,7 +14,12 @@ struct DashboardView: View {
     @EnvironmentObject var environmentVM: EnvironmentViewModel
     @EnvironmentObject var audioVM: EnvironmentAudioViewModel
 
+    #if os(macOS)
     @Environment(\.openWindow) private var openWindow
+    #else
+    @State private var showDevicesSheet = false
+    @State private var showLogsSheet = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -27,19 +32,55 @@ struct DashboardView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(
                 LinearGradient(
-                    colors: [Color(nsColor: .windowBackgroundColor), Color.gray.opacity(0.04)],
+                    colors: [
+                        {
+                            #if os(macOS)
+                            return Color(nsColor: .windowBackgroundColor)
+                            #else
+                            return Color(uiColor: .systemBackground)
+                            #endif
+                        }(),
+                        Color.gray.opacity(0.04)
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
             .navigationTitle("BLE Dashboard")
         }
+#if !os(macOS)
+        .sheet(isPresented: $showDevicesSheet) {
+            NavigationStack {
+                DevicesSheetView()
+                    .environmentObject(vm)
+                    .navigationTitle("Devices")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { showDevicesSheet = false }
+                        }
+                    }
+            }
+        }
+        .sheet(isPresented: $showLogsSheet) {
+            NavigationStack {
+                LogsSheetView()
+                    .environmentObject(vm)
+                    .navigationTitle("Logs")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { showLogsSheet = false }
+                        }
+                    }
+            }
+        }
+#endif
     }
 
     // MARK: - Top
 
     private var topBar: some View {
         HStack(spacing: 10) {
+            #if os(macOS)
             Button {
                 openWindow(id: "devices-window")
             } label: {
@@ -51,6 +92,19 @@ struct DashboardView: View {
             } label: {
                 Label("Logs", systemImage: "text.alignleft")
             }
+            #else
+            Button {
+                showDevicesSheet = true
+            } label: {
+                Label("Devices", systemImage: "dot.radiowaves.left.and.right")
+            }
+
+            Button {
+                showLogsSheet = true
+            } label: {
+                Label("Logs", systemImage: "text.alignleft")
+            }
+            #endif
 
             Divider().frame(height: 20)
 
@@ -288,3 +342,149 @@ struct DashboardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
+
+#if !os(macOS)
+private struct DevicesSheetView: View {
+    @EnvironmentObject var vm: DashboardViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 10) {
+            header
+            controls
+            devicesList
+        }
+        .padding(12)
+        .onAppear {
+            if vm.isBluetoothReady && !vm.isScanning {
+                vm.search()
+            }
+        }
+        .onDisappear {
+            if vm.isScanning {
+                vm.stopSearch()
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            Text("BLE Devices (NUS)")
+                .font(.title3.weight(.semibold))
+
+            Spacer()
+
+            connectionPill
+        }
+    }
+
+    private var connectionPill: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(vm.connectedName == nil ? Color.orange : Color.green)
+                .frame(width: 8, height: 8)
+
+            Text(vm.connectedName == nil ? "Not connected" : (vm.connectedName ?? "Connected"))
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: 180, alignment: .leading)
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(vm.connectedName == nil ? Color.orange.opacity(0.12) : Color.green.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(vm.connectedName == nil ? Color.orange.opacity(0.35) : Color.green.opacity(0.35), lineWidth: 1)
+        )
+    }
+
+    private var controls: some View {
+        HStack(spacing: 8) {
+            Button {
+                vm.search()
+            } label: {
+                Label("Search", systemImage: "magnifyingglass")
+            }
+            .disabled(!vm.isBluetoothReady || vm.isScanning)
+
+            Button {
+                vm.stopSearch()
+            } label: {
+                Label("Stop", systemImage: "stop.fill")
+            }
+            .disabled(!vm.isScanning)
+
+            Spacer()
+
+            Text(vm.isScanning ? "Scanning..." : "Idle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var devicesList: some View {
+        List(vm.devices) { device in
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(device.name)
+                        .font(.body)
+
+                    Text(device.id.uuidString)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer()
+
+                Text("RSSI \(device.rssi)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Button("Connect") {
+                    vm.stopSearch()
+                    vm.connect(device)
+                    dismiss()
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+}
+
+private struct LogsSheetView: View {
+    @EnvironmentObject var vm: DashboardViewModel
+
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Text("Logs")
+                    .font(.title3.weight(.semibold))
+                Spacer()
+                Button("Clear") {
+                    vm.clearLogsFallback()
+                }
+            }
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(vm.logs.enumerated()), id: \.offset) { _, line in
+                        Text(line)
+                            .font(.system(size: 12, weight: .regular, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(8)
+            }
+            .background(Color.gray.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .padding(12)
+    }
+}
+#endif

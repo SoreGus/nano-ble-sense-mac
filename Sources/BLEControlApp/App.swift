@@ -4,6 +4,7 @@
 //
 //  App entry point and window/command configuration.
 //
+
 import SwiftUI
 
 @main
@@ -35,6 +36,8 @@ struct BLEControlApp: App {
                 .environmentObject(environmentVM)
                 .environmentObject(environmentAudioVM)
         }
+
+        #if os(macOS)
         .commands {
             ToolsCommands()
         }
@@ -50,23 +53,22 @@ struct BLEControlApp: App {
                 .environmentObject(dashboardVM)
         }
         .defaultSize(width: 900, height: 520)
+        #endif
     }
 }
 
+#if os(macOS)
 struct ToolsCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandMenu("Tools") {
-            Button("Devices") {
-                openWindow(id: "devices-window")
-            }
-            .keyboardShortcut("d", modifiers: [.command, .shift])
+            Button("Devices") { openWindow(id: "devices-window") }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
 
-            Button("Logs") {
-                openWindow(id: "logs-window")
-            }
-            .keyboardShortcut("l", modifiers: [.command, .shift])
+            Button("Logs") { openWindow(id: "logs-window") }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
         }
     }
 }
+#endif
